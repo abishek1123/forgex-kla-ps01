@@ -105,6 +105,84 @@ def degrade(gt, rng, cfg=TRAIN):
                       cfg.get("gamma_k", GAMMA_K))
 
 
+# ---------------------------------------------------------------------------
+# WIDE: the out-of-distribution family
+# ---------------------------------------------------------------------------
+# The test set is half OOD "from different sources". TRAIN above reproduces
+# KLA's degradation faithfully -- exactly the wrong goal for that half.
+#
+# The evidence for widening is not a hunch. r2-long120, trained on the round-1
+# generator (blur 25% of the time, randomised operation order, wider additive
+# noise), falls only 1.79 dB from sigma 0.19 to 0.45 where r2-newgen -- trained
+# on the CORRECT generator -- falls 5.10 dB. Being wrong in a varied way
+# generalised better than being right in a narrow one.
+#
+# So WIDE keeps the measured functional form and adds back the VARIETY, framed
+# honestly: not "KLA blurs" (we proved they do not) but "a different instrument
+# might, and we want the model to have seen it".
+WIDE = dict(
+    sigma_add=(0.000, 0.180),     # 1.9x TRAIN -- long120 saw gauss up to 0.18
+    sigma_mul=(0.060, 0.500),     # 1.5x TRAIN at the top, lower at the bottom
+    c=(0.000, 0.450),
+    gamma_k=(4.0, 60.0),          # noise SHAPE varies too, not just its scale
+    blur_p=0.30,                  # optics differ between instruments
+    blur_sigma=(0.3, 1.1),
+    soft_p=0.25,                  # a non-box downsample kernel
+)
+
+
+def _gauss1d(sigma):
+    r = max(int(np.ceil(3.0 * sigma)), 1)
+    x = np.arange(-r, r + 1, dtype=np.float64)
+    k = np.exp(-x * x / (2.0 * sigma * sigma))
+    return k / k.sum()
+
+
+def _blur(x, sigma):
+    """Separable Gaussian, numpy only, vectorised (no per-row Python loop)."""
+    k = _gauss1d(sigma)
+    r = len(k) // 2
+    H, W = x.shape
+    p = np.pad(x, ((r, r), (r, r)), mode="reflect")
+    y = sum(k[i] * p[i:i + H, :] for i in range(len(k)))
+    return sum(k[j] * y[:, j:j + W] for j in range(len(k)))
+
+
+def _soft_down(x, f=2):
+    """A gently Gaussian-weighted 2x2 instead of a flat box average. KLA uses a
+    box; another instrument's readout might not."""
+    H, W = (x.shape[0] // f) * f, (x.shape[1] // f) * f
+    b = x[:H, :W].reshape(H // f, f, W // f, f)
+    w = np.array([0.62, 0.38])
+    return np.einsum("ijkl,j,l->ik", b, w, w)
+
+
+def degrade_wide(gt, rng, cfg=WIDE):
+    """Same law as degrade(), wider and more varied. For the OOD half.
+
+    Order matters: optics act on the CLEAN image, before sampling, so any blur
+    is applied to the ground truth first -- never to the noisy output, which
+    would correlate noise we measured to be spatially white.
+    """
+    x = np.asarray(gt, dtype=np.float64)
+    if rng.random() < cfg.get("blur_p", 0.0):
+        x = _blur(x, float(rng.uniform(*cfg["blur_sigma"])))
+
+    if rng.random() < cfg.get("soft_p", 0.0):
+        m = _soft_down(x)
+        _, v = block_stats(x)
+    else:
+        m, v = block_stats(x)
+
+    k = cfg.get("gamma_k", GAMMA_K)
+    k = float(rng.uniform(*k)) if isinstance(k, (tuple, list)) else float(k)
+    var = (float(rng.uniform(*cfg["sigma_add"])) ** 2
+           + float(rng.uniform(*cfg["sigma_mul"])) ** 2 * (m * m)
+           + float(rng.uniform(*cfg["c"])) * v)
+    out = m + np.sqrt(np.maximum(var, 0.0)) * _unit_skewed(rng, m.shape, k)
+    return np.ascontiguousarray(out, dtype=np.float32)
+
+
 # --- round 1, kept for the record ------------------------------------------
 # Calibrated on the photograph dataset. var = sigma_add^2 + sigma_mul^2 * I^2,
 # no detail term, Gaussian noise, 25% blur, randomised operation order.

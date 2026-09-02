@@ -10,7 +10,7 @@ import numpy as np
 import torch
 from torch.utils.data import Dataset
 
-from degrade import degrade, TRAIN
+from degrade import degrade, degrade_wide, TRAIN, WIDE
 
 
 def list_ids(d):
@@ -60,10 +60,14 @@ def _dihedral(a, k):
 class RestoreDataset(Dataset):
     """Yields (lr, hr) float32 tensors: (1, crop, crop) and (1, 2*crop, 2*crop)."""
 
-    def __init__(self, gt_dir, lr_dir, ids, crop=64, p_real=0.3, cfg=TRAIN, seed=0, length=None):
+    def __init__(self, gt_dir, lr_dir, ids, crop=64, p_real=0.3, cfg=TRAIN, seed=0,
+                 length=None, wide_p=0.0, wide_cfg=WIDE):
         self.gt_dir, self.lr_dir = gt_dir, lr_dir
         self.ids = list(ids)
         self.crop, self.p_real, self.cfg, self.seed = crop, p_real, cfg, seed
+        # wide_p: of the SYNTHETIC draws, the fraction taken from the wide
+        # out-of-distribution family instead of the calibrated one.
+        self.wide_p, self.wide_cfg = float(wide_p), wide_cfg
         self.length = int(length) if length else len(self.ids)
 
     def __len__(self):
@@ -88,6 +92,8 @@ class RestoreDataset(Dataset):
 
         if self.lr_dir is not None and g.random() < self.p_real:
             lr = np.load(os.path.join(self.lr_dir, name + ".npy")).astype(np.float32)[y:y + c, x:x + c]
+        elif self.wide_p and g.random() < self.wide_p:
+            lr = degrade_wide(hr, g, self.wide_cfg)
         else:
             lr = degrade(hr, g, self.cfg)
 

@@ -51,6 +51,10 @@ def parse():
     p.add_argument("--nb", type=int, default=16)
     p.add_argument("--lr", type=float, default=2e-4)
     p.add_argument("--p-real", type=float, default=0.3, help="fraction of KLA's own noisy files")
+    p.add_argument("--wide-p", type=float, default=0.0,
+                   help="of the SYNTHETIC draws, the fraction from the wide OOD "
+                        "degradation family (blur, soft kernels, wider ranges). "
+                        "0 = calibrated generator only, as before.")
     p.add_argument("--loss", choices=["combo", "charbonnier"], default="combo")
     p.add_argument("--deg-c", type=float, default=None,
                    help="override the detail term c in the degradation model. "
@@ -125,7 +129,7 @@ def main():
         deg_cfg["c"] = (a.deg_c, a.deg_c)
         print(f"degradation override: c={a.deg_c}")
     train_ds = RestoreDataset(gt_dir, lr_dir, train_ids, crop=a.crop, p_real=a.p_real,
-                              cfg=deg_cfg, seed=a.seed, length=a.iters * a.batch)
+                              cfg=deg_cfg, seed=a.seed, length=a.iters * a.batch, wide_p=a.wide_p)
     val_ds = ValDataset(gt_dir, lr_dir, val_ids)
     train_dl = DataLoader(train_ds, batch_size=a.batch, shuffle=True, num_workers=a.workers,
                           pin_memory=(device.type == "cuda"), drop_last=True,
