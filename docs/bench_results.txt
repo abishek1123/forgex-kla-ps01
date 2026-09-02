@@ -1,0 +1,39 @@
+input: 41 files   reps: 9   python: C:\Users\abishek sr\Desktop\kla\kla-restore\.venv\Scripts\python.exe
+
+  rep 1  run.py           6.83s   rc=0   wrote 41 files to bench_old
+  rep 1  run_fast.py      5.29s   rc=0   wrote 41 files to bench_new
+  rep 2  run.py           4.44s   rc=0   wrote 41 files to bench_old
+  rep 2  run_fast.py      4.53s   rc=0   wrote 41 files to bench_new
+  rep 3  run.py           4.45s   rc=0   wrote 41 files to bench_old
+  rep 3  run_fast.py      4.50s   rc=0   wrote 41 files to bench_new
+  rep 4  run.py           5.49s   rc=0   wrote 41 files to bench_old
+  rep 4  run_fast.py      4.68s   rc=0   wrote 41 files to bench_new
+  rep 5  run.py           4.74s   rc=0   wrote 41 files to bench_old
+  rep 5  run_fast.py      3.75s   rc=0   wrote 41 files to bench_new
+  rep 6  run.py           3.83s   rc=0   wrote 41 files to bench_old
+  rep 6  run_fast.py      4.33s   rc=0   wrote 41 files to bench_new
+  rep 7  run.py           5.72s   rc=0   wrote 41 files to bench_old
+  rep 7  run_fast.py      4.72s   rc=0   wrote 41 files to bench_new
+  rep 8  run.py           5.69s   rc=0   wrote 41 files to bench_old
+  rep 8  run_fast.py      4.79s   rc=0   wrote 41 files to bench_new
+  rep 9  run.py           4.34s   rc=0   wrote 41 files to bench_old
+  rep 9  run_fast.py      4.41s   rc=0   wrote 41 files to bench_new
+
+run.py        best   3.83s   median   4.74s   worst   6.83s
+run_fast.py   best   3.75s   median   4.53s   worst   5.29s
+
+outputs: 41 files   max abs diff 4.883e-04   PSNR between them 91.4 dB
+shapes:  [(256, 256), (512, 512)]
+range:   [0.0000, 1.0000]
+
+PSNR vs ground truth   run.py 22.416418   run_fast.py 22.416417   difference 0.000001 dB  (n=40)
+  -> the numeric difference is IRRELEVANT to the score
+
+                median     mean    stdev     best    worst
+run.py            4.74     5.06     0.94     3.83     6.83
+run_fast.py       4.53     4.56     0.41     3.75     5.29
+
+median difference +0.21s against a typical run-to-run spread of 0.67s
+  -> INSIDE THE NOISE. Not a measurable difference; keep run.py (the verified artifact).
+
+VERDICT: run_fast.py is 1.02x the speed of run.py (NOT faster - keep run.py)

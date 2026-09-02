@@ -1,0 +1,9 @@
+# Inference (run.py) requires ONLY these two packages.
+# Versions are those used to train and validate the submitted model.
+torch==2.13.0
+numpy==2.4.4
+
+# --- Training / analysis only. NOT imported by run.py. ---
+# scipy==1.17.1
+# matplotlib==3.10.0
+# lpips==0.1.4

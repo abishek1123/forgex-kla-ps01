@@ -1,0 +1,29 @@
+__pycache__/
+*.pyc
+.ipynb_checkpoints/
+.DS_Store
+.venv/
+venv/
+
+# editing backups -- working files, never part of the submission
+*.bak
+*.bak[0-9]
+
+# never commit data or checkpoints -- the repo becomes unusable
+data/
+runs/
+*.npy
+*.pt
+*.pth
+*.onnx
+preview*.png
+testin/
+testout*/
+
+# ...except the single model we submit
+!models/model.pt
+
+# KLA repo requirement: the restored test outputs MUST be committed
+!outputs/*.npy
+!outputs/*.png
+!outputs/*.tif
