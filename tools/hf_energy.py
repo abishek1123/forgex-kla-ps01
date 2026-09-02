@@ -103,22 +103,35 @@ def main():
                 out.append(hf_fraction(y, a.cut))
         rows.append((tag, np.array(out)))
 
-    print(f"{'model':<20}{'HF(out)':>10}{'HF(gt)':>10}{'ratio':>9}{'p95':>9}   verdict")
-    print("-" * 76)
+    # AGGREGATE ratio (total energy / total energy), not the mean of per-image
+    # ratios. Per-image ratios divide by HF(gt), which on a very smooth image is
+    # near zero -- so a trace of interpolation ringing produces a huge quotient
+    # and a p95 that says "hallucinating" about bicubic, which is a fixed linear
+    # filter and cannot invent anything. The aggregate has no such blow-up, and
+    # the median per-image ratio is reported beside it as a robust check.
+    print(f"{'model':<20}{'HF(out)':>10}{'HF(gt)':>10}{'aggregate':>11}{'median':>9}"
+          f"{'>1':>6}   verdict")
+    print("-" * 86)
     for tag, hf in rows:
-        ratio = hf / np.maximum(gt_hf, 1e-12)
-        m_, p95 = float(ratio.mean()), float(np.percentile(ratio, 95))
-        if p95 > 1.05:
+        agg = float(hf.sum() / max(gt_hf.sum(), 1e-12))
+        per = hf / np.maximum(gt_hf, 1e-12)
+        med = float(np.median(per))
+        over = int((per > 1.0).sum())
+        if agg > 1.05:
             v = "HALLUCINATING -- invents structure"
-        elif m_ > 1.02:
-            v = "over-sharpening, watch it"
-        elif m_ < 0.55:
-            v = "very conservative / blurry"
+        elif agg > 1.00:
+            v = "at the line -- watch it"
+        elif agg > 0.60:
+            v = "safe -- close to truth, draws no more"
         else:
-            v = "safe -- draws less than exists"
-        print(f"{tag:<20}{hf.mean():>10.4f}{gt_hf.mean():>10.4f}{m_:>9.3f}{p95:>9.3f}   {v}")
-    print("\nratio > 1 anywhere means energy above the LR Nyquist that the ground")
-    print("truth does not contain -- i.e. detail the model made up.")
+            v = "safe -- conservative, under-draws"
+        print(f"{tag:<20}{hf.mean():>10.4f}{gt_hf.mean():>10.4f}{agg:>11.3f}{med:>9.3f}"
+              f"{over:>6}   {v}")
+    print("\naggregate > 1 means the model puts MORE energy above the LR Nyquist than")
+    print("the ground truth contains -- detail it made up. Under 1 means it draws less")
+    print("fine structure than truly exists, which is the safe direction for inspection.")
+    print("'>1' counts individual images over the line; a handful on very smooth images")
+    print("is ringing, not fabrication.")
 
 
 if __name__ == "__main__":

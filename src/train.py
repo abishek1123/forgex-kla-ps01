@@ -51,6 +51,19 @@ def parse():
     p.add_argument("--nb", type=int, default=16)
     p.add_argument("--lr", type=float, default=2e-4)
     p.add_argument("--p-real", type=float, default=0.3, help="fraction of KLA's own noisy files")
+    p.add_argument("--extra-gt", default="",
+                   help="directory of EXTRA clean GT images from another source "
+                        "(e.g. NFFA crops). No real noisy pairs exist for these, "
+                        "so they are always degraded synthetically. Widens CONTENT.")
+    p.add_argument("--p-extra", type=float, default=0.0,
+                   help="fraction of training draws taken from --extra-gt")
+    p.add_argument("--hard-w", type=float, default=0.0,
+                   help="content-balanced sampling: tilt draws toward FINE structure "
+                        "(high f90), where we are weakest. 0 = uniform, 1 = "
+                        "proportional to f90, 2 = proportional to f90 squared. "
+                        "Requires --stats-csv.")
+    p.add_argument("--stats-csv", default="docs/per_image_stats.csv",
+                   help="per-image f90 table from tools/categories.py")
     p.add_argument("--wide-p", type=float, default=0.0,
                    help="of the SYNTHETIC draws, the fraction from the wide OOD "
                         "degradation family (blur, soft kernels, wider ranges). "
@@ -129,7 +142,9 @@ def main():
         deg_cfg["c"] = (a.deg_c, a.deg_c)
         print(f"degradation override: c={a.deg_c}")
     train_ds = RestoreDataset(gt_dir, lr_dir, train_ids, crop=a.crop, p_real=a.p_real,
-                              cfg=deg_cfg, seed=a.seed, length=a.iters * a.batch, wide_p=a.wide_p)
+                              cfg=deg_cfg, seed=a.seed, length=a.iters * a.batch, wide_p=a.wide_p,
+                              extra_gt=(a.extra_gt or None), p_extra=a.p_extra,
+                              hard_w=a.hard_w, stats_csv=a.stats_csv)
     val_ds = ValDataset(gt_dir, lr_dir, val_ids)
     train_dl = DataLoader(train_ds, batch_size=a.batch, shuffle=True, num_workers=a.workers,
                           pin_memory=(device.type == "cuda"), drop_last=True,
