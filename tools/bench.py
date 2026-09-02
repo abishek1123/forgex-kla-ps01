@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Benchmark run.py against run_fast.py end-to-end and write the verdict to a file.
+"""Benchmark two entry-point scripts end-to-end and write the verdict to a file.
 
-    python tools\bench.py
+    python tools/bench.py --a run.py --b run2.py --input testin
 
 Times the WHOLE PROCESS (which is what KLA measures), alternating between the
 two scripts so GPU clock and thermal drift hit both equally -- a 1.9x spread
@@ -9,14 +9,21 @@ from thermal state alone bit us in round 1. Then compares the outputs.
 
 Writes bench_results.txt next to the repo root.
 """
-import os, subprocess, sys, time, glob
+import argparse, os, subprocess, sys, time, glob
 import numpy as np
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 ROOT = os.path.abspath(os.path.join(HERE, ".."))
 PY   = sys.executable
-REPS = 9
-IN   = os.path.join(ROOT, "testin")
+
+_ap = argparse.ArgumentParser()
+_ap.add_argument("--a", default="run.py", help="baseline script")
+_ap.add_argument("--b", default="run2.py", help="challenger script")
+_ap.add_argument("--input", default="testin", help="directory of .npy inputs")
+_ap.add_argument("--reps", type=int, default=9)
+_A = _ap.parse_args()
+REPS = _A.reps
+IN   = _A.input if os.path.isabs(_A.input) else os.path.join(ROOT, _A.input)
 
 def wall(script, outdir):
     t = time.perf_counter()
@@ -37,10 +44,10 @@ if not os.path.isdir(IN):
 say(f"input: {len(glob.glob(os.path.join(IN,'*.npy')))} files   reps: {REPS}   python: {PY}")
 say()
 
-times = {"run.py": [], "run_fast.py": []}
+times = {_A.a: [], _A.b: []}
 errs  = {}
 for i in range(REPS):
-    for s, o in (("run.py", "bench_old"), ("run_fast.py", "bench_new")):
+    for s, o in ((_A.a, "bench_old"), (_A.b, "bench_new")):
         dt, rc, tail, err = wall(s, o)
         times[s].append(dt)
         if rc != 0:
@@ -82,28 +89,28 @@ if os.path.isdir(GT):
         return float(np.mean(ps)), len(ps)
     po, no = score("bench_old"); pn, nn = score("bench_new")
     say()
-    say(f"PSNR vs ground truth   run.py {po:.6f}   run_fast.py {pn:.6f}   "
+    say(f"PSNR vs ground truth   {_A.a} {po:.6f}   {_A.b} {pn:.6f}   "
         f"difference {abs(po-pn):.6f} dB  (n={no})")
     say(f"  -> the numeric difference is {'IRRELEVANT to the score' if abs(po-pn) < 0.001 else 'MOVING THE SCORE - investigate'}")
 
 import statistics as st
-fo, fn = times["run.py"], times["run_fast.py"]
+fo, fn = times[_A.a], times[_A.b]
 say()
 say(f"{'':<13}{'median':>9}{'mean':>9}{'stdev':>9}{'best':>9}{'worst':>9}")
-for k, v in (("run.py", fo), ("run_fast.py", fn)):
+for k, v in ((_A.a, fo), (_A.b, fn)):
     say(f"{k:<13}{st.median(v):>9.2f}{st.mean(v):>9.2f}{st.stdev(v):>9.2f}{min(v):>9.2f}{max(v):>9.2f}")
 d = st.median(fo) - st.median(fn)
 pooled = (st.stdev(fo) + st.stdev(fn)) / 2
 say()
 say(f"median difference {d:+.2f}s against a typical run-to-run spread of {pooled:.2f}s")
 if abs(d) < pooled:
-    say("  -> INSIDE THE NOISE. Not a measurable difference; keep run.py (the verified artifact).")
+    say(f"  -> INSIDE THE NOISE. Not a measurable difference; keep {_A.a} (the verified artifact).")
 else:
-    say(f"  -> {'run_fast.py is genuinely faster - merge it' if d > 0 else 'run.py is genuinely faster - keep it'}")
+    say(f"  -> {_A.b + ' is genuinely faster - adopt it' if d > 0 else _A.a + ' is genuinely faster - keep it'}")
 
-fast_best, old_best = min(times["run_fast.py"]), min(times["run.py"])
+fast_best, old_best = min(times[_A.b]), min(times[_A.a])
 say()
-say(f"VERDICT: run_fast.py is {old_best/fast_best:.2f}x the speed of run.py "
+say(f"VERDICT: {_A.b} is {old_best/fast_best:.2f}x the speed of {_A.a} "
     f"({'FASTER - merge it' if fast_best < old_best*0.97 else 'NOT faster - keep run.py'})")
 
 out = os.path.join(ROOT, "bench_results.txt")
