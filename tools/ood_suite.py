@@ -94,7 +94,22 @@ def main():
         return pool[:: max(1, len(pool) // a.n)][:a.n]
 
     jobs = [(name, kind, lvl, pick()) for name, kind, lvl in AXES]
-    jobs += [(name, "noise", BAND, pick(lo, hi)) for name, (lo, hi) in BLOCKS.items()]
+    # Content axes are defined by TRAINING-set id ranges. On any other dataset
+    # (e.g. the organisers' 297-image test set, ids 0-296) those ranges are
+    # empty, which used to produce a NaN row and a NaN MEAN. Skip them, and say
+    # so, rather than reporting a number that is not a number.
+    skipped = []
+    for name, (lo, hi) in BLOCKS.items():
+        sel = pick(lo, hi)
+        if len(sel) < max(4, a.n // 4):
+            skipped.append(f"{name} (ids {lo}-{hi}: only {len(sel)} images here)")
+            continue
+        jobs.append((name, "noise", BAND, sel))
+    if skipped:
+        print("skipping content axes -- id range not present in this dataset:")
+        for x in skipped:
+            print("   " + x)
+        print()
 
     print(f"{len(jobs)} axes x {a.n} images, device={dev}\n")
     models = {os.path.basename(os.path.dirname(c)) or c: load_model(c, dev) for c in a.ckpts}

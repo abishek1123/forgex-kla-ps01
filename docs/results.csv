@@ -24,3 +24,17 @@ v1-round1-model,runs\v1\best.pt,76,23.1721,0.55963,0.50442,7.002,1.369
 r2-degfix,runs\r2-degfix\last.pt,119,23.1199,0.59338,0.37485,22.628,1.369
 r2-preal1,runs\r2-preal1\last.pt,119,23.2842,0.61225,0.34775,12.19,1.369
 preal1-on-block,runs\r2-preal1\last.pt,119,24.5622,0.66376,0.33847,10.397,1.369
+newgen-512,runs\r2-newgen\last.pt,119,25.913,0.6051,0.39436,43.822,1.369
+newgen-512,runs\r2-newgen\last.pt,119,25.913,0.6051,0.39436,37.191,1.369
+SHIPPED-tta+tta,models\model.pt,-1,23.3023,0.613,0.34902,86.958,1.369
+SHIPPED,models\model.pt,-1,23.0899,0.58381,0.20601,9.338,1.369
+SHIPPED,models\model.pt,-1,23.0899,0.58381,0.20601,12.849,1.369
+shipped-on-block,models\model.pt,-1,24.2752,0.63778,0.18852,10.461,1.369
+TESTSET-shipped,models\model.pt,-1,23.608,0.60369,0.1975,10.991,1.369
+shipped-512,models\model.pt,-1,25.4582,0.57952,0.23198,36.182,1.369
+shipped-512,models\model.pt,-1,25.4582,0.57952,0.23198,37.18,1.369
+TESTSET-preal1,runs\r2-preal1\last.pt,119,23.8657,0.63216,0.33656,13.862,1.369
+TESTSET-ship,models/model.pt,119,23.632,0.60791,0.19288,13.815,1.369
+SPLIT-ship,models/model.pt,119,23.1041,0.58837,0.20017,15.036,1.369
+ship-on-block,models/model.pt,119,24.3021,0.64157,0.18164,13.36,1.369
+ship-512,models/model.pt,119,25.3918,0.57643,0.23621,36.593,1.369

@@ -203,14 +203,47 @@ def main():
         sys.exit(f"ERROR: input directory not found: {a.input_dir}")
     os.makedirs(a.output_dir, exist_ok=True)
 
-    files = sorted(f for f in os.listdir(a.input_dir) if f.lower().endswith(".npy"))
+    in_dir = a.input_dir
+    files = sorted(f for f in os.listdir(in_dir) if f.lower().endswith(".npy"))
+
+    # A benchmark harness may hand us the DATASET directory rather than the
+    # images directory -- e.g. semicon_test_data/, which holds GT/ and NoisyLR/.
+    # Rather than exit with "no .npy files" and score nothing, look one level
+    # down for the degraded inputs and say clearly what we did.
     if not files:
-        sys.exit(f"ERROR: no .npy files found in {a.input_dir}")
+        prefer = ("noisylr", "noisy", "lr", "input", "inputs", "degraded", "test", "images")
+        subs = sorted(d for d in os.listdir(in_dir) if os.path.isdir(os.path.join(in_dir, d)))
+        cand = [d for d in subs
+                if any(f.lower().endswith(".npy") for f in os.listdir(os.path.join(in_dir, d)))]
+        pick = None
+        for want in prefer:                      # a name that means "the inputs"
+            for d in cand:
+                if d.lower() == want:
+                    pick = d
+                    break
+            if pick:
+                break
+        if pick is None and len(cand) == 1:      # only one candidate: unambiguous
+            pick = cand[0]
+        if pick is not None:
+            in_dir = os.path.join(in_dir, pick)
+            files = sorted(f for f in os.listdir(in_dir) if f.lower().endswith(".npy"))
+            print(f"note: no .npy at the top level of {a.input_dir}; "
+                  f"using {in_dir} ({len(files)} files)", flush=True)
+        elif len(cand) > 1:
+            sys.exit(f"ERROR: no .npy files in {a.input_dir}, and more than one "
+                     f"subdirectory contains them: {cand}. Point me at one of them.")
+
+    if not files:
+        listing = sorted(os.listdir(in_dir))[:12]
+        sys.exit(f"ERROR: no .npy files found in {a.input_dir}\n"
+                 f"       directory contains: {listing}"
+                 + ("" if len(listing) < 12 else " ..."))
 
     # ---- read every input on a thread pool while CUDA is still initialising ----
     _mark("argparse + list input dir")
     reader = ThreadPoolExecutor(max_workers=a.workers)
-    futures = [reader.submit(load_npy, os.path.join(a.input_dir, f)) for f in files]
+    futures = [reader.submit(load_npy, os.path.join(in_dir, f)) for f in files]
 
     weights = find_weights(a.weights)
     ck = load_checkpoint(weights)
