@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Benchmark two entry-point scripts end-to-end and write the verdict to a file.
 
-    python tools/bench.py --a run.py --b run2.py --input testin
+    python tools/bench.py --a run.py --b <challenger>.py --input testin
 
 Times the WHOLE PROCESS (which is what KLA measures), alternating between the
 two scripts so GPU clock and thermal drift hit both equally -- a 1.9x spread
@@ -18,7 +18,7 @@ PY   = sys.executable
 
 _ap = argparse.ArgumentParser()
 _ap.add_argument("--a", default="run.py", help="baseline script")
-_ap.add_argument("--b", default="run2.py", help="challenger script")
+_ap.add_argument("--b", required=True, help="challenger script to compare against --a")
 _ap.add_argument("--input", default="testin", help="directory of .npy inputs")
 _ap.add_argument("--reps", type=int, default=9)
 _A = _ap.parse_args()

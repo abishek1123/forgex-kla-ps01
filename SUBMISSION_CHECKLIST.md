@@ -83,11 +83,11 @@ sizes in one directory are grouped and batched correctly.
 * **Cross-machine reproducibility checked, not assumed**: the same configuration
   scores 22.7468 on an RTX 4090 and 22.74 on an RTX 4050.
 * Three inference optimisations were written, benchmarked and **rejected on the
-  measurement**: 8× test-time augmentation (+0.018 dB for 7.1× the time), a
-  pinned-buffer/CUDA-stream I/O path (`run2.py`, +0.04 s on a 1.94 s spread),
-  and a `channels_last` layout fix (`run3.py`, −0.06 s on a 0.73 s spread).
-  All three produced bit-identical output. Both files are kept in the repo as
-  evidence rather than deleted.
+  measurement**: 8× test-time augmentation (+0.018 dB for 7.1× the time),
+  pinned staging buffers with CUDA streams (+0.04 s on a 1.94 s run-to-run
+  spread), and a `channels_last` layout fix (−0.06 s on a 0.73 s spread). All
+  three produced bit-identical output, so none shipped. The timing runs are in
+  `docs/bench_results.txt`.
 
 ## Results (organisers' 297-image test set)
 

@@ -4,7 +4,8 @@
 # is shared and acts as the checksum (see docs/ENGINEERING_LOG.md 11.2).
 #   w00  = --p-real 0.3 --wide-p 0.0                 (no wide family, no LPIPS)
 #   w50  = --p-real 0.3 --wide-p 0.5                 (wide family, no LPIPS)
-#   lp05 = --p-real 0.3 --wide-p 0.5 --w-lpips 0.05  (SHIPPED)
+#   lp05 = --p-real 0.3 --wide-p 0.5 --w-lpips 0.05  (shipped when this sweep
+#          ran; later superseded by pr50-w50-lp05-120, see ENGINEERING_LOG 12.4)
 sigma_mul,bicubic_psnr,w00_psnr,w50_psnr,lp05_psnr,w00_lpips,w50_lpips,lp05_lpips
 0.05,22.74,23.72,23.65,23.56,0.457,0.454,0.230
 0.10,21.76,23.29,23.25,23.15,0.443,0.449,0.240

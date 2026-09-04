@@ -127,7 +127,7 @@ survive on round-2 data.
 > this comparison was made — is the one operating point at which all three
 > models agree, so the comparison was resolving a 0.13 dB difference at the
 > place where there is nothing to see. The shipped configuration is
-> 30% real / 35% wide synthetic / 35% narrow synthetic.
+> 50% real / 25% wide synthetic / 25% narrow synthetic.
 
 ### 3.2 The null-result table
 
@@ -360,10 +360,11 @@ to the **clean ground truth before noise is sampled**: optics act on the image,
 not on the sensor, and blurring the degraded output would spatially correlate
 noise that we measured to be white (lag-1 −0.055 / −0.053).
 
-The shipped mixture is 30% real / 35% wide / 35% narrow. (`wide_p` is the
+The shipped mixture is 50% real / 25% wide / 25% narrow. (`wide_p` is the
 fraction of the SYNTHETIC draws taken from the wide family, not of all draws:
-`--p-real 0.3 --wide-p 0.5` leaves 70% synthetic, split half and half. We stated
-this as 30/50/20 in an earlier revision, which was wrong.)
+`--p-real 0.5 --wide-p 0.5` leaves 50% synthetic, split half and half. The runs
+tagged `pr30-*` in § 12 used `--p-real 0.3`, which is 30/35/35; we stated that
+as 30/50/20 in an earlier revision, which was wrong.)
 
 ### 7.5 The lesson, stated so we do not repeat it
 
@@ -505,8 +506,8 @@ effect is a result.
 | Intervention | Measured | Verdict |
 |---|---|---|
 | 8× test-time augmentation | +0.018 dB, 7.1× slower (12.2 → 87.0 ms) | rejected |
-| Pinned staging buffers + CUDA streams (`run2.py`) | +0.04 s on a 1.94 s run-to-run spread; output bit-identical | rejected, file kept |
-| `channels_last` layout fix (`run3.py`) | −0.06 s on a 0.73 s spread; output bit-identical | rejected, file kept |
+| Pinned staging buffers + CUDA streams | +0.04 s on a 1.94 s run-to-run spread; output bit-identical | rejected |
+| `channels_last` layout fix | −0.06 s on a 0.73 s spread; output bit-identical | rejected |
 | Content-balanced sampling (p ∝ f90^w) | −0.090 dB | rejected |
 | Gaussian-weighted downsampling in the wide family (`soft_p`) | +0.01 dB (+2.99 vs +2.98 OOD mean) | null; **kept only because the shipped weights were trained with it** |
 | 3.74 M-parameter model | +0.026 dB | rejected |
@@ -518,7 +519,7 @@ checkpoint, `r2-preal1` (23.2842) — that pairing is where the +0.018 dB TTA
 figure comes from. The rows tagged `SHIPPED` (23.0899) are the current weights.
 The tag is misleading and is left as written rather than edited after the fact.
 
-**The `run3.py` story is worth the extra line.** Reading `run.py` to answer a
+**The `channels_last` story is worth the extra line.** Reading `run.py` to answer a
 question about inference cost, we found that line 154 converts the input to
 `channels_last` and the forward call then does `model(v.contiguous())` — and
 `.contiguous()` with no argument converts a channels_last tensor straight back
@@ -528,10 +529,10 @@ run-to-run spread**, bit-identical output. cuDNN was evidently already picking
 the right kernel from the weight layout. A real bug in the code that costs
 nothing measurable is still a null result, and we report it as one.
 
-One thing `run3.py` *did* change: its run-to-run standard deviation is 0.29 s
-against `run.py`'s 1.17 s, and its worst case 6.37 s against 9.13 s. It is
-steadier, not faster. We did not ship it, because the median is what the
-scoring will see and the median did not move.
+One thing the fix *did* change: its run-to-run standard deviation is 0.29 s
+against 1.17 s, and its worst case 6.37 s against 9.13 s. It is steadier, not
+faster. We did not ship it, because the median is what the scoring will see and
+the median did not move.
 
 On `soft_p` specifically: the honest thing would be to delete it. We are not
 deleting it, because `models/model.pt` was trained with it in the sampler, and

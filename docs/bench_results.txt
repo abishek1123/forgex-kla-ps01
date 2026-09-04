@@ -1,3 +1,11 @@
+# Raw output of tools/bench.py.
+#
+# run2.py and run3.py were two experimental alternatives to run.py -- a pinned
+# staging-buffer / CUDA-stream I/O path, and a channels_last layout fix. Both
+# measured null against the run-to-run spread and produced bit-identical output,
+# so neither shipped and neither is in the repository. This file is the timing
+# evidence behind that decision. run.py is the only inference script.
+
 input: 297 files   reps: 9   python: C:\Users\abishek sr\Desktop\kla\kla-restore\.venv\Scripts\python.exe
 
   rep 1  run.py           9.13s   rc=0   wrote 297 files to bench_old

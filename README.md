@@ -255,8 +255,8 @@ degraded output — optics act on the image, not on the sensor noise, and
 blurring the output would correlate noise that is measurably white.
 
 `wide_p` is the fraction **of the synthetic draws** taken from the wide family,
-not of all draws, so `--p-real 0.3 --wide-p 0.5` gives **30% real / 35% wide /
-35% narrow**. Real pairs stay in because they are the only ground truth about
+not of all draws, so `--p-real 0.5 --wide-p 0.5` gives **50% real / 25% wide /
+25% narrow**. Real pairs stay in because they are the only ground truth about
 what KLA's sensor actually does; the wide family is what makes the model
 robust to a sensor it has never seen.
 
@@ -454,8 +454,8 @@ which is why every number in this repo is a final-5 mean, and why anything under
 | Content-balanced sampling (p ∝ f90) | −0.090 dB | null |
 | Gaussian-weighted downsampling in the wide family | +0.01 dB | null |
 | 8× test-time augmentation | +0.018 dB, 7.1× slower | null, and expensive |
-| Pinned-buffer / stream I/O rewrite (`run2.py`) | +0.04 s on a 1.94 s spread | null, bit-identical output |
-| `channels_last` layout fix (`run3.py`) | −0.06 s on a 0.73 s spread | null, bit-identical output |
+| Pinned staging buffers + CUDA streams | +0.04 s on a 1.94 s spread | null, bit-identical output |
+| `channels_last` layout fix | −0.06 s on a 0.73 s spread | null, bit-identical output |
 | 3× training length (40 → 120 epochs) | +0.030 dB | marginal |
 | **Real pairs instead of synthetic (in-distribution)** | **+0.133 dB** | **real effect** |
 | **Wide degradation family (3 σ-steps out)** | **+3.8 dB** | **the effect that decided the model** |
@@ -489,7 +489,6 @@ outputs/                ← 3. DENOISED TEST OUTPUTS: all 297, plus preview.png
 requirements.txt        ← 4. ENVIRONMENT SPEC: complete pip freeze
 models/model.pt         ← trained weights, 1.37 M params, 5.5 MB
 requirements-inference.txt ← the two packages run.py actually imports
-run2.py, run3.py        ← two inference optimisations that measured null, kept
 src/
   degrade.py            narrow (calibrated) + wide (OOD) degradation families
   dataset.py            pair loading, real/wide/narrow mixing, random + block splits
@@ -553,16 +552,16 @@ python tools/noise_physics.py --data <data>    # speckle vs Poisson
 python src/train.py --data <data> --smoke      # ~5 s, CPU, checks plumbing
 
 # the SHIPPED configuration
-python src/train.py --data <data> --out runs/lp05-120 --amp \
+python src/train.py --data <data> --out runs/pr50-w50-lp05-120 --amp \
                     --epochs 120 --iters 500 --batch 32 \
                     --ch 64 --nb 16 \
-                    --p-real 0.3 --wide-p 0.5 --w-lpips 0.05 \
+                    --p-real 0.5 --wide-p 0.5 --w-lpips 0.05 \
                     --seed 0 --split-seed 0
 
-python src/validate.py --data <data> --ckpt runs/lp05-120/last.pt --baseline
-python tools/noise_sweep.py --data <data> --ckpt runs/lp05-120/last.pt
-python tools/ood_suite.py   --data <data> --ckpt runs/lp05-120/last.pt
-python tools/hf_energy.py   --data <data> --ckpt runs/lp05-120/last.pt
+python src/validate.py --data <data> --ckpt runs/pr50-w50-lp05-120/last.pt --baseline
+python tools/noise_sweep.py --data <data> --ckpt runs/pr50-w50-lp05-120/last.pt
+python tools/ood_suite.py   --data <data> --ckpt runs/pr50-w50-lp05-120/last.pt
+python tools/hf_energy.py   --data <data> --ckpt runs/pr50-w50-lp05-120/last.pt
 ```
 
 `--seed` and `--split-seed` are deliberately separate: the validation split must
@@ -598,9 +597,10 @@ score **23.632 / 0.60791 / 0.19288** on the RTX 4090 pod and **23.632 / 0.60791 
   the breakdown. On a warm machine roughly 72% of wall-clock is process startup
   (`import torch` plus CUDA init) rather than the network, so startup cost
   amortises over the size of the test set. We tried to beat it a second time
-  with pinned staging buffers and CUDA streams (`run2.py`); the difference was
-  0.04 s against a 1.94 s run-to-run spread, with bit-identical output. We kept
-  the file rather than delete the evidence.
+  with pinned staging buffers and CUDA streams, and a third time with a
+  `channels_last` layout fix; both differences fell inside the run-to-run
+  spread and both produced bit-identical output, so neither shipped. The
+  measurements are in `docs/bench_results.txt`.
 
 ## What we still do not know
 
